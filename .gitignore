@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+
+# Local index state / models
+*.sqlite
+index_state.sqlite
+.fastembed_cache/
+qdrant_storage/
+
+# Env / editor
+.env
+.idea/
+.vscode/
