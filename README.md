@@ -18,22 +18,48 @@ $ semantic-index search "where do we validate the incremental index state?"
 
 ## Architecture
 
+Two flows share one vector store: an **indexing** flow that keeps the index in sync with the code, and a **search** flow that answers queries. Both embed text with the *same* local model, so queries and code live in the same vector space.
+
 ```mermaid
-flowchart LR
-    A[Git repo] --> B[Walk & filter files]
-    B --> C[Chunk<br/>sliding window + overlap]
-    C --> D[Embed<br/>FastEmbed · local CPU]
-    D --> E[(Qdrant<br/>vector store)]
-    B --> F[(SQLite<br/>content-hash state)]
-    F -.incremental: skip unchanged.-> C
-    G[CLI / MCP client] --> H[Embed query] --> E --> I[Top-K code chunks]
-    subgraph AI agent
-      J[Claude] <-->|search_code tool| K[MCP server]
+flowchart TB
+    subgraph INDEX ["① Indexing flow  (build / keep the index fresh)"]
+        direction TB
+        R["Git repository"] --> W["Walk files<br/>(filter by language,<br/>skip vendor dirs)"]
+        W --> CH{"Content hash<br/>changed since<br/>last run?"}
+        CH -->|"unchanged"| SKIP["skip file"]
+        CH -->|"new or changed"| CK["Chunk<br/>(sliding window<br/>+ overlap)"]
+        CK --> EM["Embed chunks<br/>FastEmbed · local CPU"]
+        EM --> UP["Upsert vectors"]
     end
-    K --> H
+
+    subgraph DATA ["Storage (self-hosted, free)"]
+        direction LR
+        QD[("Qdrant<br/>vector DB")]
+        SQ[("SQLite<br/>file hashes")]
+    end
+
+    subgraph SEARCH ["② Search flow  (answer a query)"]
+        direction TB
+        Qin["Query text"] --> QE["Embed query<br/>(same model)"]
+        QE --> KNN["Nearest-neighbour<br/>search"]
+        KNN --> OUT["Top-K code chunks<br/>path : line-range + snippet"]
+    end
+
+    subgraph USERS ["Who asks"]
+        direction LR
+        CLI["CLI<br/>semantic-index search"]
+        AGENT["AI agent / Claude<br/>MCP search_code tool"]
+    end
+
+    UP --> QD
+    CH -. "check & update hashes" .-> SQ
+    CLI --> Qin
+    AGENT --> Qin
+    QE --> QD
+    QD --> KNN
 ```
 
-**Pipeline:** walk → chunk → embed → upsert to Qdrant, with a SQLite content-hash table so re-indexing only touches files that changed (and prunes files that were deleted). A query is embedded with the same model and answered by nearest-neighbour search. An MCP server exposes a `search_code` tool so an AI agent can retrieve grounded snippets.
+**In words:** walk the repo → skip any file whose content hash is unchanged (SQLite) → chunk the rest → embed each chunk locally with FastEmbed → upsert into Qdrant. Deleted files are pruned. A query is embedded with the *same* model and answered by nearest-neighbour search in Qdrant. The CLI and an MCP `search_code` tool (for Claude and other agents) both use that one search path, so results are grounded in your actual code.
 
 ## Why these components (and how they map to a production stack)
 
