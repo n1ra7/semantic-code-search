@@ -114,11 +114,44 @@ Run the MCP server (`semantic-index-mcp`) and register it with any MCP client. E
 }
 ```
 
-The agent then has a `search_code(query, limit, language)` tool returning the top matching chunks with file paths and line ranges — grounded context for code Q&A and issue triage.
+The agent then has two tools: `search_code(query, limit, language)` returns the top matching chunks with file paths and line ranges, and `answer_question(question, k)` returns a RAG answer grounded in those chunks — both give grounded context for code Q&A and issue triage.
+
+## Ask questions about your code (RAG chat)
+
+On top of raw search, a retrieval-augmented chat answers natural-language questions using a **local LLM** ([Ollama](https://ollama.com)) grounded in retrieved code — no API keys, fully offline.
+
+```bash
+ollama pull qwen2.5-coder:7b          # one-time; any Ollama model works (set CHAT_MODEL)
+semantic-index chat "how does incremental re-indexing decide what to skip?"
+```
+
+It retrieves the top-K chunks, feeds them to the model as cited context, and prints an answer plus its **source files (`path:line-range`)** so every claim is traceable. If no Ollama server is running, `chat` degrades gracefully to showing the retrieved context instead of failing.
+
+## Evaluation
+
+A retrieval system is only as good as you can measure. The `eval/` harness scores retrieval quality against a small labeled dataset ([`eval/dataset.jsonl`](eval/dataset.jsonl)) — natural-language queries mapped to the files that should be retrieved:
+
+```bash
+python -m eval.retrieval_eval     # needs a running index (Qdrant + model)
+```
+
+It reports the standard IR metrics per query and as dataset means:
+
+| Metric | Meaning |
+|---|---|
+| **precision@k** | fraction of top-k results that are relevant |
+| **recall@k** | fraction of relevant files found in top-k |
+| **hit@k** | did any relevant file make the top-k? |
+| **MRR** | 1 / rank of the first relevant hit |
+| **nDCG@k** | rank-weighted relevance (higher = relevant hits ranked earlier) |
+
+For **answer quality**, `eval/judge.py` provides RAGAS-style **faithfulness** and **context-relevance** scores via an LLM-as-judge (the same local Ollama model) — so you can catch answers that drift from the retrieved context, not just measure retrieval. The interface (`context, question, answer -> score`) matches the [`ragas`](https://docs.ragas.io) library if you want to swap in its full suite.
+
+The metric functions in `eval/metrics.py` are pure and unit-tested (`tests/test_eval_metrics.py`) — they run with no network or Qdrant.
 
 ## Configuration
 
-All settings have working defaults and are overridable via environment variables (see [`.env.example`](.env.example)): `QDRANT_URL`, `COLLECTION`, `EMBED_MODEL`, `STATE_DB`, `MAX_CHUNK_LINES`, `CHUNK_OVERLAP_LINES`, `BATCH_SIZE`.
+All settings have working defaults and are overridable via environment variables (see [`.env.example`](.env.example)): `QDRANT_URL`, `COLLECTION`, `EMBED_MODEL`, `STATE_DB`, `MAX_CHUNK_LINES`, `CHUNK_OVERLAP_LINES`, `BATCH_SIZE`, `OLLAMA_URL`, `CHAT_MODEL`.
 
 Swap the embedding model with `EMBED_MODEL`, e.g. `BAAI/bge-small-en-v1.5` (smaller/faster) or `nomic-ai/nomic-embed-text-v1.5`. The vector dimension is detected automatically.
 

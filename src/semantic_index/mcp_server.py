@@ -38,6 +38,24 @@ def search_code(query: str, limit: int = 8, language: Optional[str] = None) -> L
     return _get_searcher().search(query, limit=limit, language=language)
 
 
+@mcp.tool()
+def answer_question(question: str, k: int = 6) -> dict:
+    """Answer a question about the codebase using RAG (retrieval + a local LLM).
+
+    Retrieves the top-K code chunks and asks a local Ollama model to answer using only
+    that context. Returns the answer plus the source chunks it was grounded in.
+    Requires a local Ollama server; raises if one isn't reachable.
+    """
+    from .llm import OllamaClient
+    from .rag import RagChat
+
+    llm = OllamaClient()
+    if not llm.available():
+        return {"error": f"Ollama not reachable at {llm.url}", "sources": []}
+    ans = RagChat(searcher=_get_searcher(), llm=llm).ask(question, k=k)
+    return {"answer": ans.answer, "sources": ans.sources}
+
+
 def main() -> None:
     mcp.run()  # stdio transport
 

@@ -22,6 +22,11 @@ class Settings:
     # Incremental-indexing state (SQLite, replaces DynamoDB).
     state_db: str = os.getenv("STATE_DB", "./index_state.sqlite")
 
+    # RAG chat: a local Ollama server generates answers from retrieved code.
+    # Free and offline; if Ollama isn't running, chat degrades to showing retrieved context.
+    ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
+    chat_model: str = os.getenv("CHAT_MODEL", "qwen2.5-coder:7b")
+
     # Chunking + batching.
     max_chunk_lines: int = int(os.getenv("MAX_CHUNK_LINES", "60"))
     chunk_overlap_lines: int = int(os.getenv("CHUNK_OVERLAP_LINES", "10"))

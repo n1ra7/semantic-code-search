@@ -40,5 +40,33 @@ def search(
         typer.echo("-" * 70)
 
 
+@app.command()
+def chat(
+    question: str = typer.Argument(..., help="Natural-language question about the codebase."),
+    k: int = typer.Option(6, help="How many code chunks to retrieve as context."),
+) -> None:
+    """Answer a question grounded in retrieved code (RAG). Needs a local Ollama server;
+    falls back to showing the retrieved context if Ollama isn't running."""
+    from .llm import OllamaClient
+    from .rag import RagChat
+
+    llm = OllamaClient()
+    if not llm.available():
+        typer.secho(
+            f"Ollama not reachable at {llm.url} — showing retrieved context only.\n"
+            "(Start Ollama and `ollama pull qwen2.5-coder:7b` to get generated answers.)",
+            fg=typer.colors.YELLOW,
+        )
+        for h in Searcher().search(question, limit=k):
+            typer.secho(f"[{h['score']:.3f}] {h['path']}:{h['start_line']}-{h['end_line']}", fg=typer.colors.CYAN)
+        raise typer.Exit()
+
+    ans = RagChat(llm=llm).ask(question, k=k)
+    typer.echo(ans.answer)
+    typer.secho("\nSources:", fg=typer.colors.CYAN)
+    for s in ans.sources:
+        typer.echo(f"  {s['path']}:{s['start_line']}-{s['end_line']}")
+
+
 if __name__ == "__main__":
     app()

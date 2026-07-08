@@ -1,0 +1,8 @@
+{"query": "how are vectors stored and searched in the vector database", "relevant": ["src/semantic_index/store.py"]}
+{"query": "how does incremental re-indexing skip files that have not changed", "relevant": ["src/semantic_index/state.py", "src/semantic_index/indexer.py"]}
+{"query": "how is a source file split into chunks", "relevant": ["src/semantic_index/chunker.py"]}
+{"query": "how are text embeddings generated locally without an API", "relevant": ["src/semantic_index/embedder.py"]}
+{"query": "what tool does the MCP server expose to AI agents", "relevant": ["src/semantic_index/mcp_server.py"]}
+{"query": "how do I run a search from the command line", "relevant": ["src/semantic_index/cli.py"]}
+{"query": "where is the Qdrant URL and embedding model configured", "relevant": ["src/semantic_index/config.py"]}
+{"query": "how does the RAG chat build context and answer a question", "relevant": ["src/semantic_index/rag.py"]}
