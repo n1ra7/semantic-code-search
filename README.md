@@ -16,6 +16,8 @@ $ semantic-index search "where do we validate the incremental index state?"
 ----------------------------------------------------------------------
 ```
 
+> 📖 **New here?** See **[USAGE.md](USAGE.md)** for a full step-by-step guide (setup, indexing, search, RAG chat, evaluation, and a 60-second smoke test).
+
 ## Architecture
 
 Two flows share one vector store: an **indexing** flow that keeps the index in sync with the code, and a **search** flow that answers queries. Both embed text with the *same* local model, so queries and code live in the same vector space.
