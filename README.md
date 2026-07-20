@@ -17,6 +17,8 @@ $ semantic-index search "where do we validate the incremental index state?"
 ```
 
 > 📖 **New here?** See **[USAGE.md](USAGE.md)** for a full step-by-step guide (setup, indexing, search, RAG chat, evaluation, and a 60-second smoke test).
+>
+> 🗺️ **Where it's headed:** see the **[Roadmap](docs/ROADMAP.md)** — AST chunking, hybrid retrieval, reranking, and a measured ablation.
 
 ## Architecture
 
