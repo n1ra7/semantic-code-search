@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Iterator, List
 
 from .chunker import Chunk, chunk_file
+from .chunker_ast import chunk_file_ast
 from .config import settings
 from .embedder import Embedder
 from .state import StateStore
@@ -29,6 +30,8 @@ class Indexer:
         self.embedder = embedder or Embedder()
         self.store = VectorStore(dim=self.embedder.dim)
         self.state = StateStore()
+        # Pick the chunker by strategy: "ast" (tree-sitter) or "line" (sliding window).
+        self._chunk = chunk_file_ast if settings.chunk_strategy == "ast" else chunk_file
 
     def _iter_files(self, root: Path) -> Iterator[Path]:
         for path in root.rglob("*"):
@@ -70,7 +73,7 @@ class Indexer:
 
             # Changed file: drop its old chunks, then re-add.
             self.store.delete_by_path(rel)
-            chunks = chunk_file(rel, text)
+            chunks = self._chunk(rel, text)
             for ch in chunks:
                 batch_chunks.append(ch)
                 batch_texts.append(ch.text)

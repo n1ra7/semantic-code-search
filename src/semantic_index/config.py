@@ -27,6 +27,9 @@ class Settings:
     ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
     chat_model: str = os.getenv("CHAT_MODEL", "qwen2.5-coder:7b")
 
+    # Chunking strategy: "line" (sliding window) or "ast" (function/class boundaries via tree-sitter).
+    chunk_strategy: str = os.getenv("CHUNK_STRATEGY", "line")
+
     # Chunking + batching.
     max_chunk_lines: int = int(os.getenv("MAX_CHUNK_LINES", "60"))
     chunk_overlap_lines: int = int(os.getenv("CHUNK_OVERLAP_LINES", "10"))
