@@ -16,11 +16,29 @@ jobs:
       - run: pip install -e ".[dev]"
       - run: pytest -q
 
+  eval-smoke:
+    # Deterministic end-to-end retrieval eval (hashing embedder, no model download) —
+    # gates that the chunk -> embed -> Qdrant -> search -> eval pipeline still works and
+    # that metrics haven't regressed below a floor. Reproducible, so CI stays reliable.
+    runs-on: ubuntu-latest
+    services:
+      qdrant:
+        image: qdrant/qdrant
+        ports:
+          - 6333:6333
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: python -m eval.ci_smoke
+
   image:
     # Build (and, on pushes to main, publish) the container image to GitHub Container
     # Registry — the free replacement for AWS ECR. Uses the built-in GITHUB_TOKEN,
     # so no secrets to configure.
-    needs: test
+    needs: [test, eval-smoke]
     runs-on: ubuntu-latest
     permissions:
       contents: read
