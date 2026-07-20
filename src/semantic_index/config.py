@@ -19,6 +19,10 @@ class Settings:
     # A code-specialized default; swap via EMBED_MODEL. See README for options.
     embed_model: str = os.getenv("EMBED_MODEL", "jinaai/jina-embeddings-v2-base-code")
 
+    # Retrieval mode: "dense" (vector only) or "hybrid" (dense + sparse BM25, RRF-fused).
+    retrieval_mode: str = os.getenv("RETRIEVAL", "dense")
+    sparse_model: str = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
+
     # Incremental-indexing state (SQLite, replaces DynamoDB).
     state_db: str = os.getenv("STATE_DB", "./index_state.sqlite")
 
