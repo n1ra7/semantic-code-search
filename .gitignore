@@ -17,3 +17,7 @@ qdrant_storage/
 .env
 .idea/
 .vscode/
+
+# Local demo-recording scaffolding — keep scripts out, but allow a recorded GIF in
+demo/*
+!demo/*.gif
