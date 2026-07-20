@@ -15,11 +15,12 @@ class Searcher:
         embedder: Embedder | None = None,
         sparse_embedder: SparseEmbedder | None = None,
         reranker: Reranker | None = None,
+        collection: str | None = None,
     ) -> None:
         self.embedder = embedder or Embedder()
         self.hybrid = sparse_embedder is not None or settings.retrieval_mode == "hybrid"
         self.sparse = sparse_embedder or (SparseEmbedder() if settings.retrieval_mode == "hybrid" else None)
-        self.store = VectorStore(dim=self.embedder.dim, hybrid=self.hybrid)
+        self.store = VectorStore(dim=self.embedder.dim, hybrid=self.hybrid, collection=collection)
         self.reranker = reranker or (Reranker() if settings.rerank_enabled else None)
 
     def search(self, query: str, limit: int = 8, language: Optional[str] = None) -> List[dict]:
