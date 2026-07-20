@@ -17,3 +17,6 @@ qdrant_storage/
 .env
 .idea/
 .vscode/
+
+# Local demo-recording scaffolding (not part of the published repo)
+demo/
