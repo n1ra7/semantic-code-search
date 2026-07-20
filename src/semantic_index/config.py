@@ -36,6 +36,10 @@ class Settings:
     ollama_url: str = os.getenv("OLLAMA_URL", "http://localhost:11434")
     chat_model: str = os.getenv("CHAT_MODEL", "qwen2.5-coder:7b")
 
+    # Hallucination fallback: if the top retrieval score is below this, decline to answer
+    # instead of generating. Interpreted in the retrieval score's scale (tune per mode).
+    fallback_min_score: float = float(os.getenv("FALLBACK_MIN_SCORE", "0.2"))
+
     # Chunking strategy: "line" (sliding window) or "ast" (function/class boundaries via tree-sitter).
     chunk_strategy: str = os.getenv("CHUNK_STRATEGY", "line")
 
