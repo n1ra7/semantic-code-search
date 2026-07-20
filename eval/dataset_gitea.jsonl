@@ -1,0 +1,39 @@
+{"query": "Where is user login and authentication handled?", "relevant": ["services/auth/auth.go", "routers/web/auth/auth.go"], "negative": false}
+{"query": "How is HTTP basic authentication implemented?", "relevant": ["services/auth/basic.go"], "negative": false}
+{"query": "Where is OAuth2 login handled?", "relevant": ["services/auth/oauth2.go"], "negative": false}
+{"query": "How does two-factor authentication (2FA) work?", "relevant": ["models/auth/twofactor.go", "routers/web/auth/2fa.go"], "negative": false}
+{"query": "How is an authentication token validated?", "relevant": ["services/auth/auth_token.go"], "negative": false}
+{"query": "How is signed-request (HTTP signature) authentication handled?", "relevant": ["services/auth/httpsign.go"], "negative": false}
+{"query": "Where are user sessions stored and managed?", "relevant": ["modules/session/store.go", "services/auth/session.go"], "negative": false}
+{"query": "How is a new repository created?", "relevant": ["services/repository/create.go"], "negative": false}
+{"query": "How are repository branches created and managed?", "relevant": ["services/repository/branch.go"], "negative": false}
+{"query": "How are collaborators added to a repository?", "relevant": ["services/repository/collaboration.go"], "negative": false}
+{"query": "How is an existing repository on disk adopted?", "relevant": ["services/repository/adopt.go"], "negative": false}
+{"query": "How are repository avatars handled?", "relevant": ["services/repository/avatar.go"], "negative": false}
+{"query": "How are pull requests merged?", "relevant": ["services/pull/merge.go"], "negative": false}
+{"query": "How is a squash merge performed?", "relevant": ["services/pull/merge_squash.go"], "negative": false}
+{"query": "How is a rebase merge performed?", "relevant": ["services/pull/merge_rebase.go"], "negative": false}
+{"query": "How are pull requests prepared before merging?", "relevant": ["services/pull/merge_prepare.go"], "negative": false}
+{"query": "Where is the core pull request logic?", "relevant": ["services/pull/pull.go"], "negative": false}
+{"query": "How are issues created and updated?", "relevant": ["services/issue/issue.go"], "negative": false}
+{"query": "How are issue assignees managed?", "relevant": ["services/issue/assignee.go"], "negative": false}
+{"query": "How are issue comments handled?", "relevant": ["services/issue/comments.go"], "negative": false}
+{"query": "How are issue labels managed?", "relevant": ["services/issue/label.go"], "negative": false}
+{"query": "Where are webhooks delivered to external services?", "relevant": ["services/webhook/deliver.go"], "negative": false}
+{"query": "How is the Discord webhook integration implemented?", "relevant": ["services/webhook/discord.go"], "negative": false}
+{"query": "Where are notification and alert emails sent?", "relevant": ["services/mailer/mail.go"], "negative": false}
+{"query": "How are issue notification emails composed?", "relevant": ["services/mailer/mail_issue.go"], "negative": false}
+{"query": "How are release announcement emails sent?", "relevant": ["services/mailer/mail_release.go"], "negative": false}
+{"query": "How is repository access permission checked?", "relevant": ["models/perm/access/repo_permission.go", "models/perm/access/access.go"], "negative": false}
+{"query": "Where is git push and pull over HTTP handled?", "relevant": ["routers/web/repo/githttp.go"], "negative": false}
+{"query": "How is video transcoding for uploaded media handled?", "relevant": [], "negative": true}
+{"query": "Where is the payment and credit-card checkout processed?", "relevant": [], "negative": true}
+{"query": "How does the product recommendation ML model get trained?", "relevant": [], "negative": true}
+{"query": "Where is the shopping cart and order fulfillment implemented?", "relevant": [], "negative": true}
+{"query": "How are voice or video calls between users established?", "relevant": [], "negative": true}
+{"query": "How is facial recognition run on uploaded photos?", "relevant": [], "negative": true}
+{"query": "Where is the cryptocurrency wallet balance managed?", "relevant": [], "negative": true}
+{"query": "How does the ride-dispatch matching algorithm work?", "relevant": [], "negative": true}
+{"query": "Where is the email spam-classification model?", "relevant": [], "negative": true}
+{"query": "How is real-time GPS location tracking handled?", "relevant": [], "negative": true}
+{"query": "Where is the airline seat-reservation booking engine?", "relevant": [], "negative": true}
