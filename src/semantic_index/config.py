@@ -23,6 +23,11 @@ class Settings:
     retrieval_mode: str = os.getenv("RETRIEVAL", "dense")
     sparse_model: str = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
 
+    # Cross-encoder reranking of the top candidates (RERANK=on|off).
+    rerank_enabled: bool = os.getenv("RERANK", "off").lower() in ("on", "true", "1")
+    rerank_model: str = os.getenv("RERANK_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
+    rerank_candidates: int = int(os.getenv("RERANK_CANDIDATES", "40"))
+
     # Incremental-indexing state (SQLite, replaces DynamoDB).
     state_db: str = os.getenv("STATE_DB", "./index_state.sqlite")
 
