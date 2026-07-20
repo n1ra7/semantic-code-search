@@ -11,6 +11,7 @@ from typing import List, Optional
 
 from .config import settings
 from .llm import OllamaClient
+from .metrics import record_rag
 from .search import Searcher
 
 SYSTEM_PROMPT = (
@@ -76,6 +77,7 @@ class RagChat:
 
         # Hallucination fallback: if retrieval isn't confident, decline instead of guessing.
         if not has_sufficient_evidence(hits, self.min_score):
+            record_rag("declined")
             return Answer(
                 question=question,
                 answer=INSUFFICIENT_EVIDENCE,
@@ -92,4 +94,5 @@ class RagChat:
             "immediately after each claim:"
         )
         answer = self.llm.generate(prompt, system=SYSTEM_PROMPT)
+        record_rag("answered")
         return Answer(question=question, answer=answer, sources=sources, context=context)

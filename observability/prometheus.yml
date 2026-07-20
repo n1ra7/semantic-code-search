@@ -1,0 +1,10 @@
+# Minimal Prometheus scrape config for the semantic-code-search metrics endpoint.
+# Start the MCP server with METRICS_ENABLED=on (metrics served on :9464 by default),
+# then run Prometheus with this config to scrape it.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: semantic-code-search
+    static_configs:
+      - targets: ["host.docker.internal:9464"]  # the app's /metrics endpoint
