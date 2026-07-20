@@ -11,7 +11,7 @@ from typing import Iterator, List
 from .chunker import Chunk, chunk_file
 from .chunker_ast import chunk_file_ast
 from .config import settings
-from .embedder import Embedder
+from .embedder import Embedder, SparseEmbedder
 from .state import StateStore
 from .store import VectorStore
 
@@ -26,9 +26,12 @@ SKIP_DIRS = {
 
 
 class Indexer:
-    def __init__(self, embedder: Embedder | None = None) -> None:
+    def __init__(self, embedder: Embedder | None = None, sparse_embedder: SparseEmbedder | None = None) -> None:
         self.embedder = embedder or Embedder()
-        self.store = VectorStore(dim=self.embedder.dim)
+        # Hybrid when a sparse embedder is injected or RETRIEVAL=hybrid is configured.
+        self.hybrid = sparse_embedder is not None or settings.retrieval_mode == "hybrid"
+        self.sparse = sparse_embedder or (SparseEmbedder() if settings.retrieval_mode == "hybrid" else None)
+        self.store = VectorStore(dim=self.embedder.dim, hybrid=self.hybrid)
         self.state = StateStore()
         # Pick the chunker by strategy: "ast" (tree-sitter) or "line" (sliding window).
         self._chunk = chunk_file_ast if settings.chunk_strategy == "ast" else chunk_file
@@ -54,7 +57,8 @@ class Indexer:
             if not batch_chunks:
                 return
             vectors = self.embedder.embed(batch_texts)
-            self.store.upsert(vectors, batch_chunks)
+            sparse = self.sparse.embed(batch_texts) if self.sparse else None
+            self.store.upsert(vectors, batch_chunks, sparse_vectors=sparse)
             batch_chunks.clear()
             batch_texts.clear()
 
