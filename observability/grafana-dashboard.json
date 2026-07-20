@@ -1,0 +1,68 @@
+{
+  "title": "semantic-code-search",
+  "uid": "semantic-code-search",
+  "schemaVersion": 39,
+  "editable": true,
+  "time": { "from": "now-1h", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "current": { "text": "Prometheus", "value": "Prometheus" }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Search rate (per mode)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "sum by (mode) (rate(scs_searches_total[5m]))", "legendFormat": "{{mode}}" }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Search latency p95 (s)",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum by (le, mode) (rate(scs_search_latency_seconds_bucket[5m])))",
+          "legendFormat": "p95 {{mode}}"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "title": "Top retrieval score p50",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.5, sum by (le) (rate(scs_top_score_bucket[5m])))",
+          "legendFormat": "median top score"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "title": "RAG fallback rate (declined / total)",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(scs_rag_requests_total{outcome=\"declined\"}[5m])) / clamp_min(sum(rate(scs_rag_requests_total[5m])), 1e-9)",
+          "legendFormat": "fallback rate"
+        }
+      ]
+    }
+  ]
+}

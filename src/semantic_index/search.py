@@ -1,10 +1,12 @@
 """Query side: embed the query, retrieve (dense or hybrid), optionally cross-encoder rerank."""
 from __future__ import annotations
 
+import time
 from typing import List, Optional
 
 from .config import settings
 from .embedder import Embedder, SparseEmbedder
+from .metrics import record_search
 from .reranker import Reranker, apply_rerank
 from .store import VectorStore
 
@@ -24,6 +26,7 @@ class Searcher:
         self.reranker = reranker or (Reranker() if settings.rerank_enabled else None)
 
     def search(self, query: str, limit: int = 8, language: Optional[str] = None) -> List[dict]:
+        start = time.perf_counter()
         vector = self.embedder.embed([query])[0]
         sparse_vector = self.sparse.embed([query])[0] if self.sparse else None
 
@@ -34,4 +37,10 @@ class Searcher:
         if self.reranker and hits:
             scores = self.reranker.rerank(query, [h["text"] for h in hits])
             hits = apply_rerank(hits, scores, limit)
+
+        record_search(
+            mode="hybrid" if self.hybrid else "dense",
+            latency=time.perf_counter() - start,
+            top_score=hits[0]["score"] if hits else None,
+        )
         return hits

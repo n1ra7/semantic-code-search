@@ -40,6 +40,10 @@ class Settings:
     # instead of generating. Interpreted in the retrieval score's scale (tune per mode).
     fallback_min_score: float = float(os.getenv("FALLBACK_MIN_SCORE", "0.2"))
 
+    # Observability: expose Prometheus metrics from the MCP server when enabled.
+    metrics_enabled: bool = os.getenv("METRICS_ENABLED", "off").lower() in ("on", "true", "1")
+    metrics_port: int = int(os.getenv("METRICS_PORT", "9464"))
+
     # Chunking strategy: "line" (sliding window) or "ast" (function/class boundaries via tree-sitter).
     chunk_strategy: str = os.getenv("CHUNK_STRATEGY", "line")
 
