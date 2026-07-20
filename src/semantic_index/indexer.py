@@ -26,15 +26,23 @@ SKIP_DIRS = {
 
 
 class Indexer:
-    def __init__(self, embedder: Embedder | None = None, sparse_embedder: SparseEmbedder | None = None) -> None:
+    def __init__(
+        self,
+        embedder: Embedder | None = None,
+        sparse_embedder: SparseEmbedder | None = None,
+        chunk_strategy: str | None = None,
+        collection: str | None = None,
+        state_db: str | None = None,
+    ) -> None:
         self.embedder = embedder or Embedder()
         # Hybrid when a sparse embedder is injected or RETRIEVAL=hybrid is configured.
         self.hybrid = sparse_embedder is not None or settings.retrieval_mode == "hybrid"
         self.sparse = sparse_embedder or (SparseEmbedder() if settings.retrieval_mode == "hybrid" else None)
-        self.store = VectorStore(dim=self.embedder.dim, hybrid=self.hybrid)
-        self.state = StateStore()
+        self.store = VectorStore(dim=self.embedder.dim, hybrid=self.hybrid, collection=collection)
+        self.state = StateStore(state_db)
         # Pick the chunker by strategy: "ast" (tree-sitter) or "line" (sliding window).
-        self._chunk = chunk_file_ast if settings.chunk_strategy == "ast" else chunk_file
+        strategy = chunk_strategy or settings.chunk_strategy
+        self._chunk = chunk_file_ast if strategy == "ast" else chunk_file
 
     def _iter_files(self, root: Path) -> Iterator[Path]:
         for path in root.rglob("*"):
