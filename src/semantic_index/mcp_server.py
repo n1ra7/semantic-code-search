@@ -10,6 +10,7 @@ from typing import List, Optional
 
 from mcp.server.fastmcp import FastMCP
 
+from .config import settings
 from .search import Searcher
 
 mcp = FastMCP("semantic-code-search")
@@ -57,6 +58,10 @@ def answer_question(question: str, k: int = 6) -> dict:
 
 
 def main() -> None:
+    if settings.metrics_enabled:
+        from .metrics import start_metrics_server
+
+        start_metrics_server()  # Prometheus /metrics on settings.metrics_port
     mcp.run()  # stdio transport
 
 
