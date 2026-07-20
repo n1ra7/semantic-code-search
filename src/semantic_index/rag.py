@@ -15,8 +15,11 @@ from .search import Searcher
 
 SYSTEM_PROMPT = (
     "You are a precise coding assistant. Answer the question using ONLY the provided "
-    "code context. Cite the files you use as `path:start-end`. If the context is not "
-    "sufficient to answer, say so plainly instead of guessing."
+    "code context. Each chunk of context is labeled with a citation tag like "
+    "[path/to/file.py:10-25]. Support EVERY claim with an inline citation in square "
+    "brackets drawn from those tags, placed right after the claim it supports. Do not "
+    "state anything you cannot cite. If the context is not sufficient, say so plainly "
+    "instead of guessing."
 )
 
 INSUFFICIENT_EVIDENCE = (
@@ -53,8 +56,9 @@ class RagChat:
 
     @staticmethod
     def build_context(hits: List[dict]) -> str:
+        # Label each chunk with the exact citation tag the model should reuse inline.
         return "\n\n".join(
-            f"# {h['path']}:{h['start_line']}-{h['end_line']}\n{h['text']}" for h in hits
+            f"[{h['path']}:{h['start_line']}-{h['end_line']}]\n{h['text']}" for h in hits
         )
 
     def ask(self, question: str, k: int = 6, language: Optional[str] = None) -> Answer:
@@ -82,9 +86,10 @@ class RagChat:
 
         context = self.build_context(hits)
         prompt = (
-            f"Code context:\n\n{context}\n\n"
+            f"Code context (each block starts with its citation tag):\n\n{context}\n\n"
             f"Question: {question}\n\n"
-            "Answer using only the context above, and cite the files you used:"
+            "Answer using only the context above. Put an inline [path:line-range] citation "
+            "immediately after each claim:"
         )
         answer = self.llm.generate(prompt, system=SYSTEM_PROMPT)
         return Answer(question=question, answer=answer, sources=sources, context=context)
