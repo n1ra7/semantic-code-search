@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import List, Optional
 
+from .config import settings
 from .llm import OllamaClient
 from .search import Searcher
 
@@ -18,6 +19,17 @@ SYSTEM_PROMPT = (
     "sufficient to answer, say so plainly instead of guessing."
 )
 
+INSUFFICIENT_EVIDENCE = (
+    "I don't have enough relevant code in the index to answer that confidently. "
+    "Try rephrasing, or index the repository that contains the answer."
+)
+
+
+def has_sufficient_evidence(hits: List[dict], min_score: float) -> bool:
+    """Gate generation on retrieval confidence: require at least one hit whose top
+    retrieval score clears the threshold. Pure function so it's unit-testable."""
+    return bool(hits) and hits[0].get("score", 0.0) >= min_score
+
 
 @dataclass
 class Answer:
@@ -25,12 +37,19 @@ class Answer:
     answer: str
     sources: List[dict]
     context: str
+    answered: bool = True  # False when the fallback declined to generate
 
 
 class RagChat:
-    def __init__(self, searcher: Searcher | None = None, llm: OllamaClient | None = None) -> None:
+    def __init__(
+        self,
+        searcher: Searcher | None = None,
+        llm: OllamaClient | None = None,
+        min_score: float | None = None,
+    ) -> None:
         self.searcher = searcher or Searcher()
         self.llm = llm or OllamaClient()
+        self.min_score = settings.fallback_min_score if min_score is None else min_score
 
     @staticmethod
     def build_context(hits: List[dict]) -> str:
@@ -40,13 +59,7 @@ class RagChat:
 
     def ask(self, question: str, k: int = 6, language: Optional[str] = None) -> Answer:
         hits = self.searcher.search(question, limit=k, language=language)
-        context = self.build_context(hits)
-        prompt = (
-            f"Code context:\n\n{context}\n\n"
-            f"Question: {question}\n\n"
-            "Answer using only the context above, and cite the files you used:"
-        )
-        answer = self.llm.generate(prompt, system=SYSTEM_PROMPT)
+
         sources = [
             {
                 "path": h["path"],
@@ -56,4 +69,22 @@ class RagChat:
             }
             for h in hits
         ]
+
+        # Hallucination fallback: if retrieval isn't confident, decline instead of guessing.
+        if not has_sufficient_evidence(hits, self.min_score):
+            return Answer(
+                question=question,
+                answer=INSUFFICIENT_EVIDENCE,
+                sources=sources,
+                context="",
+                answered=False,
+            )
+
+        context = self.build_context(hits)
+        prompt = (
+            f"Code context:\n\n{context}\n\n"
+            f"Question: {question}\n\n"
+            "Answer using only the context above, and cite the files you used:"
+        )
+        answer = self.llm.generate(prompt, system=SYSTEM_PROMPT)
         return Answer(question=question, answer=answer, sources=sources, context=context)
