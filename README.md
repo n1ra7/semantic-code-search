@@ -153,6 +153,30 @@ For **answer quality**, `eval/judge.py` provides RAGAS-style **faithfulness** an
 
 The metric functions in `eval/metrics.py` are pure and unit-tested (`tests/test_eval_metrics.py`) — they run with no network or Qdrant.
 
+### A measured ablation (Gitea)
+
+To *validate* rather than assume each retrieval change, [`eval/ablation.py`](eval/ablation.py) runs the pipeline across configurations against a real, recognizable corpus — [go-gitea/gitea](https://github.com/go-gitea/gitea) (~24k AST chunks) — using [`eval/dataset_gitea.jsonl`](eval/dataset_gitea.jsonl) (28 feature-level queries + 11 negatives). Each row adds one change on top of the previous.
+
+```bash
+python -m eval.ablation /path/to/gitea --dataset eval/dataset_gitea.jsonl
+```
+
+Results (embedding model `BAAI/bge-small-en-v1.5`, k = 5):
+
+| Config | recall@5 | MRR | nDCG@5 |
+|---|---|---|---|
+| baseline (line chunks, dense) | **0.464** | **0.385** | **0.373** |
+| + AST chunking | 0.268 | 0.179 | 0.173 |
+| + hybrid (dense + BM25) | 0.393 | 0.248 | 0.262 |
+| + reranking | 0.411 | 0.294 | 0.288 |
+
+**What this measured — and why that's the point.** The harness surfaced a real, non-obvious result: **AST chunking *regressed* feature-level recall.** Per-function chunks are great for symbol lookup, but they strip the surrounding context (imports, neighbours, doc comments) that natural-language *feature* queries ("where is login handled?") rely on. Hybrid retrieval and reranking then recovered most of that loss. The takeaway isn't "the features are bad" — it's that **measurement beats assumption**, which is exactly what an eval harness is for.
+
+Honest caveats and next steps:
+- The ablation stacks *chunking* and *retrieval* changes cumulatively, so it doesn't cleanly isolate hybrid/reranking from the chunking regression. A fair follow-up holds chunking fixed (line) and adds hybrid → reranking.
+- `bge-small` is a general-purpose model; the code-specialized default (`jinaai/jina-embeddings-v2-base-code`) is expected to lift every row.
+- Single run, single corpus — treat the numbers as directional, not definitive.
+
 ## Configuration
 
 All settings have working defaults and are overridable via environment variables (see [`.env.example`](.env.example)): `QDRANT_URL`, `COLLECTION`, `EMBED_MODEL`, `STATE_DB`, `MAX_CHUNK_LINES`, `CHUNK_OVERLAP_LINES`, `BATCH_SIZE`, `OLLAMA_URL`, `CHAT_MODEL`.
