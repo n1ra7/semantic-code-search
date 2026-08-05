@@ -161,7 +161,7 @@ To *validate* rather than assume each retrieval change, [`eval/ablation.py`](eva
 python -m eval.ablation /path/to/gitea --dataset eval/dataset_gitea.jsonl
 ```
 
-Results (embedding model `BAAI/bge-small-en-v1.5`, k = 5):
+**Round 1 — the assumption-driven stack** (bge-small, max-pool, k = 5):
 
 | Config | recall@5 | MRR | nDCG@5 |
 |---|---|---|---|
@@ -170,12 +170,37 @@ Results (embedding model `BAAI/bge-small-en-v1.5`, k = 5):
 | + hybrid (dense + BM25) | 0.393 | 0.248 | 0.262 |
 | + reranking | 0.411 | 0.294 | 0.288 |
 
-**What this measured — and why that's the point.** The harness surfaced a real, non-obvious result: **AST chunking *regressed* feature-level recall.** Per-function chunks are great for symbol lookup, but they strip the surrounding context (imports, neighbours, doc comments) that natural-language *feature* queries ("where is login handled?") rely on. Hybrid retrieval and reranking then recovered most of that loss. The takeaway isn't "the features are bad" — it's that **measurement beats assumption**, which is exactly what an eval harness is for.
+The harness surfaced a real, non-obvious result: **AST chunking *regressed* feature-level recall** — per-function chunks strip the surrounding context that natural-language queries ("where is login handled?") rely on — and the stacked upgrades never beat the plain baseline.
 
-Honest caveats and next steps:
-- The ablation stacks *chunking* and *retrieval* changes cumulatively, so it doesn't cleanly isolate hybrid/reranking from the chunking regression. A fair follow-up holds chunking fixed (line) and adds hybrid → reranking.
-- `bge-small` is a general-purpose model; the code-specialized default (`jinaai/jina-embeddings-v2-base-code`) is expected to lift every row.
-- Single run, single corpus — treat the numbers as directional, not definitive.
+**Round 2 — measurement-driven fixes.** Diagnosing that regression produced the changes that
+actually moved the needle: **path-context embedding** (`EMBED_CONTEXT=path` — prepend the file
+path to the *embedded* text, so a chunk from `services/auth/oauth2.go` carries its feature
+vocabulary), per-file **sum-of-top-N pooling** ([`eval/aggregate.py`](eval/aggregate.py)), fair
+non-stacked arms, and a model comparison. The model × context matrix (line chunks, dense, k = 5):
+
+| recall@5 / MRR / nDCG@5 | bge-small (0.067 GB) | jina-code (0.64 GB) |
+|---|---|---|
+| no context | 0.464 / 0.385 / 0.373 | 0.571 / 0.441 / 0.447 |
+| **+ path context** | **0.804 / 0.588 / 0.629** | 0.679 / 0.480 / 0.506 |
+
+Findings, in order of surprise:
+- **Path-context embedding is the dominant fix**: +73% relative recall on line chunks, and it
+  *cures* the AST regression (0.268 → 0.786 recall with sum-3 pooling). It is now the default.
+- **The code-specialized model lost to the small general model** once context was on — despite
+  helping on the raw baseline. Domain-specialized ≠ better for your task; **the default embedder
+  is now `bge-small` based on this data** (also ~10× smaller and ~5× faster to index).
+- **Reranking with a general-purpose cross-encoder is actively harmful** on code (≈0.48 recall
+  ceiling at both 40 and 100 candidates) — measured and rejected; `RERANK` stays off by default.
+- Sum-of-top-3 pooling reliably helps dense retrieval; hybrid helps un-contextualized arms but
+  dilutes contextualized ones.
+- Operational: long-context embedding models need bounded inputs — `EMBED_MAX_CHARS` exists
+  because one long-line generated file could spike ~17 GB of attention memory (see
+  [`eval/RESULTS.md`](eval/RESULTS.md) for both OOM mechanisms).
+
+Full per-configuration grids: [`eval/RESULTS.md`](eval/RESULTS.md).
+
+Honest caveats: 28 labeled queries (each ≈3.6 points of recall — treat sub-0.05 deltas as noise),
+one corpus, one run. The headline gaps (context +0.34 recall, model −0.13) are well beyond noise.
 
 ## Configuration
 

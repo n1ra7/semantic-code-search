@@ -31,15 +31,21 @@ The items below were built as small, independent pull requests; each is measured
 
 ## Next
 
-Informed by the [ablation results](../README.md#a-measured-ablation-gitea), which found AST chunking
-regressed *feature-level* recall (per-function chunks lose surrounding context):
+The second measurement round resolved the previous "Next" list — each item was built and measured
+(see [ablation results](../README.md#a-measured-ablation-gitea) and [`eval/RESULTS.md`](../eval/RESULTS.md)):
+fair non-stacked arms ✓; the code-specialized model ✓ (measured, **rejected as default** — it lost
+to `bge-small` once context was on); context-preserving embeddings ✓ (**shipped as
+`EMBED_CONTEXT=path`, now the default**, +73% relative recall).
 
-- **Isolate chunking from retrieval** — a fairer ablation that holds chunking fixed (line) and adds
-  hybrid → reranking, to measure their contribution independent of the chunking regression.
-- **Code-specialized embeddings** — evaluate with `jinaai/jina-embeddings-v2-base-code` (the default),
-  expected to lift every row versus the general-purpose model used in the first run.
-- **Context-preserving AST chunks** — include a definition's signature/docstring and a small window of
-  surrounding context, to keep AST's structure benefits without losing feature-query recall.
+Remaining ideas, in rough priority order:
+
+- **Larger labeled set** — grow from 28 to 50+ queries with multi-file ground truth, to shrink the
+  ~3.6-point-per-query noise floor and make smaller effects measurable.
+- **Code-tuned reranker** — the general-purpose cross-encoder was measurably harmful on code;
+  evaluate a code-specific reranker before reconsidering the `RERANK` default.
+- **File-level aggregation in the serving path** — sum-of-top-N pooling helped in evaluation
+  ([`eval/aggregate.py`](../eval/aggregate.py)); expose it as a search option, not just an eval mode.
+- **Query expansion** — rewrite terse queries with a local LLM before retrieval.
 
 ## Deliberately out of scope
 
