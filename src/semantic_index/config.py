@@ -16,8 +16,11 @@ class Settings:
     collection: str = os.getenv("COLLECTION", "code_chunks")
 
     # Embeddings (FastEmbed, runs locally on CPU, replaces AWS Bedrock).
-    # A code-specialized default; swap via EMBED_MODEL. See README for options.
-    embed_model: str = os.getenv("EMBED_MODEL", "jinaai/jina-embeddings-v2-base-code")
+    # Default chosen by measurement, not size: on the Gitea benchmark bge-small (0.067 GB)
+    # beat the code-specialized jina model (0.64 GB) once path-context embedding was on
+    # (recall@5 0.804 vs 0.679) — and it indexes ~5x faster with no long-context memory
+    # spikes. See the ablation in the README. Swap via EMBED_MODEL.
+    embed_model: str = os.getenv("EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 
     # Retrieval mode: "dense" (vector only) or "hybrid" (dense + sparse BM25, RRF-fused).
     retrieval_mode: str = os.getenv("RETRIEVAL", "dense")
@@ -46,6 +49,19 @@ class Settings:
 
     # Chunking strategy: "line" (sliding window) or "ast" (function/class boundaries via tree-sitter).
     chunk_strategy: str = os.getenv("CHUNK_STRATEGY", "line")
+
+    # Embedding context: "path" (default) prepends the file path to each chunk's text when
+    # EMBEDDING it (the stored payload text is unchanged), so a chunk from
+    # services/auth/oauth2.go carries "auth"/"oauth2" signal even if the code never says it.
+    # This was the single largest measured improvement (recall@5 0.464 -> 0.804 on the Gitea
+    # benchmark). Set to "none" to disable.
+    embed_context: str = os.getenv("EMBED_CONTEXT", "path")
+
+    # Cap on characters passed to the EMBEDDING model per chunk (stored text unchanged).
+    # Long-context models (e.g. jina-code, 8192 tokens) allocate attention memory ~seq_len^2;
+    # a chunk of minified/generated long-line content can spike tens of GB even at small batch
+    # sizes. ~4k chars ≈ ~1k tokens keeps memory bounded with negligible retrieval impact.
+    embed_max_chars: int = int(os.getenv("EMBED_MAX_CHARS", "4096"))
 
     # Chunking + batching.
     max_chunk_lines: int = int(os.getenv("MAX_CHUNK_LINES", "60"))
