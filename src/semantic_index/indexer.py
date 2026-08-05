@@ -25,6 +25,19 @@ SKIP_DIRS = {
 }
 
 
+def contextualize(chunks: List[Chunk], texts: List[str], mode: str) -> List[str]:
+    """The texts to EMBED for each chunk (stored payload text stays unchanged).
+
+    mode="path" prepends the file path as a context header ("contextual chunk headers"),
+    so a per-function chunk still carries its module/feature context — e.g. a chunk from
+    services/auth/oauth2.go embeds with "auth" and "oauth2" present even if the code
+    text itself never mentions them.
+    """
+    if mode != "path":
+        return texts
+    return [f"{chunk.path}\n{text}" for chunk, text in zip(chunks, texts)]
+
+
 class Indexer:
     def __init__(
         self,
@@ -33,6 +46,7 @@ class Indexer:
         chunk_strategy: str | None = None,
         collection: str | None = None,
         state_db: str | None = None,
+        embed_context: str | None = None,
     ) -> None:
         self.embedder = embedder or Embedder()
         # Hybrid when a sparse embedder is injected or RETRIEVAL=hybrid is configured.
@@ -43,6 +57,7 @@ class Indexer:
         # Pick the chunker by strategy: "ast" (tree-sitter) or "line" (sliding window).
         strategy = chunk_strategy or settings.chunk_strategy
         self._chunk = chunk_file_ast if strategy == "ast" else chunk_file
+        self.embed_context = embed_context or settings.embed_context
 
     def _iter_files(self, root: Path) -> Iterator[Path]:
         for path in root.rglob("*"):
@@ -64,8 +79,11 @@ class Indexer:
         def flush() -> None:
             if not batch_chunks:
                 return
-            vectors = self.embedder.embed(batch_texts)
-            sparse = self.sparse.embed(batch_texts) if self.sparse else None
+            embed_texts = contextualize(batch_chunks, batch_texts, self.embed_context)
+            if settings.embed_max_chars > 0:
+                embed_texts = [t[: settings.embed_max_chars] for t in embed_texts]
+            vectors = self.embedder.embed(embed_texts)
+            sparse = self.sparse.embed(embed_texts) if self.sparse else None
             self.store.upsert(vectors, batch_chunks, sparse_vectors=sparse)
             batch_chunks.clear()
             batch_texts.clear()
